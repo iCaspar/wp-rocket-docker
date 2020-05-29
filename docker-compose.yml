@@ -1,0 +1,68 @@
+version: '3'
+
+services:
+
+  # Web Service -- Nginx
+  webserver:
+    build:
+      context: ./docker/webserver
+      dockerfile: Dockerfile
+    image: icnginx:latest
+    networks:
+      - webnet
+    ports:
+      - 80:80
+    volumes:
+      - ./app:/var/www/html
+      - ./logs/nginx:/var/log/nginx/
+
+  # Application - PHP
+  php:
+    build:
+      context: ./docker/php
+      dockerfile: Dockerfile
+    image: icphp:latest
+    container_name: phpapp
+    networks:
+      - webnet
+    volumes:
+      - ./app:/var/www/html
+      - ./root:/root
+      - ./logs/php:/usr/local/etc/php-fpm.d/zz-log.conf
+    environment:
+      - "DB_PORT=3306"
+      - "DB_HOST=database"
+
+  # Database Service -- MySQL
+  database:
+    image: mysql:5.7.23
+    networks:
+      - webnet
+    volumes:
+      - dbdata:/var/lib/mysql
+    environment:
+      - "MYSQL_ROOT_PASSWORD=secret"
+      - "MYSQL_DATABASE=caspar"
+      - "MYSQL_USER=caspar"
+      - "MYSQL_PASSWORD=secret"
+    ports:
+      - '33061:3306'
+      - '3306:3306'
+
+  # Cache service -- Redis
+  cache:
+    image: redis:latest
+    networks:
+      - webnet
+    volumes:
+      - cachedata:/data
+
+networks:
+  webnet:
+    driver: bridge
+
+volumes:
+  dbdata:
+    driver: local
+  cachedata:
+    driver: local
